@@ -92,7 +92,7 @@
             <version>3.1.0</version>
             <configuration>
                 <!-- Update this to your actual main class full name -->
-                <mainClass>org.alting.altingMainWindow</mainClass>
+                <mainClass>org.alting.OpportunityExtractor</mainClass>
             </configuration>
         </plugin>
     </plugins>
