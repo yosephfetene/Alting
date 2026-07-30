@@ -87,8 +87,9 @@ import java.awt.Font;
 import java.awt.Frame;
 
 import java.nio.charset.StandardCharsets;
-
-
+import java.sql.Connection;
+import java.sql.SQLDataException;
+import org.alting.PostgresDB;
 
 
 
@@ -816,7 +817,7 @@ public class altingMainWindow extends javax.swing.JFrame {
                     robot.keyRelease(KeyEvent.VK_SHIFT);
                     Thread.sleep(300);
 
-                    String followUp = "write sql queries that i can just run to insert them to my sql database";
+                    String followUp = "write sql queries that i can just run to insert them to my PostgreSQL database";
                     for (char ch : followUp.toCharArray()) {
                         typeChar(robot, ch);
                     }
