@@ -1,0 +1,29 @@
+name: Spotlight Collector
+
+on:
+  schedule:
+    - cron: '0 6 * * *'      # daily at 06:00 UTC (after OpenRouter's 00:00 UTC quota reset)
+  workflow_dispatch:          # also lets you run it manually from the Actions tab
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the spotlight branch's code
+        uses: actions/checkout@v4
+        with:
+          ref: spotlight       # ← run the code from spotlight, not master
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '24'    # ≥ your pom.xml compiler target (24)
+
+      - name: Write secrets into .env
+        run: |
+          echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
+
+      - name: Run the collector
+        run: mvn -q -B compile exec:java -Dexec.mainClass=org.alting.OpportunityExtractor
