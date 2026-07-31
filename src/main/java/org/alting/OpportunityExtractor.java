@@ -132,7 +132,12 @@ Rules:
         content = content.substring(start, end + 1);
 
         System.out.println("served by: " + servedBy);
-        return new JSONObject(content);
+        try{
+            return new JSONObject(content);
+        } catch (Exception e) {
+            System.out.println("Unparseable JSON from model, skipping: " + e.getMessage());
+            return null;
+        }
     }
 
     public static void processUnprocessed() throws Exception {
@@ -231,11 +236,6 @@ Rules:
 
 
     public static void main(String[] args) throws Exception {
-        // String post2258 = """
-        //     #Opportunity_Alerts📣 🚀Fully Funded Africa CDC Fellowship 2026 for Public Health Professionals🚀 ✨Are you public health professional ready to strengthen disease prevention & outbreak response across Africa? Apply for Africa CDC African Epidemic Services – Epidemiology Track Fellowship 2026. What You'll Gain: 🔹3 months of training in Addis Ababa, Ethiopia 🔹21 months of field placement in an African Union Member State 🔹Monthly stipend, travel, health insurance, learning materials & other Who Can Apply? 🔸Citizens of an AU Member State 🔸Under 35 years old 🔸Bachelor's or Master's degree in a health field 🔸At least 3 years of public health experience 🔸Proficient in at least one AU official language 📅Duration: 2 Years 🗓Program Starts: October 2026 📍Location: Addis Ababa, Ethiopia + Field Placement in an AU Member State 🔗Apply: https://ow.ly/H8O650Zob1b 📝Deadline: August 26, 2026 "If this isn't for you, please share it with others who might be interested."🙏 Follow us👇for more opportunities @opportunity_alerts
-        //     """;
-        // JSONObject data = structureOnePost(post2258);
-        // System.out.println(data.toString(2));
         TelegramFetcher.fetchAllChannels();
         processUnprocessed();
     }
