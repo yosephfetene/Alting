@@ -115,27 +115,28 @@ Rules:
             System.out.println("HTTP " + response.statusCode() + ": " + response.body());
             return null;
         }
-        JSONObject root = new JSONObject(response.body());
-        String servedBy = root.getString("model");
-        String content = root.getJSONArray("choices")
-            .getJSONObject(0)
-            .getJSONObject("message")
-            .getString("content");
-        // Free models sometimes wrap the JSON in ```fences``` or stray text.
-        // Slice from the first '{' to the last '}' so we parse only the object.
-        int start = content.indexOf('{');
-        int end = content.lastIndexOf('}');
-        if (start < 0 || end < 0) {
-            System.out.println("No JSON found in response:\n" + content);
-            return null;
-        }
-        content = content.substring(start, end + 1);
+                try {
+            JSONObject root = new JSONObject(response.body());
+            String servedBy = root.getString("model");
+            String content = root.getJSONArray("choices")
+                .getJSONObject(0)
+                .getJSONObject("message")
+                .getString("content");
 
-        System.out.println("served by: " + servedBy);
-        try{
+            // Free models sometimes wrap the JSON in ```fences``` or stray text.
+            // Slice from the first '{' to the last '}' so we parse only the object.
+            int start = content.indexOf('{');
+            int end = content.lastIndexOf('}');
+            if (start < 0 || end < 0) {
+                System.out.println("No JSON found in response, skipping.");
+                return null;
+            }
+            content = content.substring(start, end + 1);
+
+            System.out.println("served by: " + servedBy);
             return new JSONObject(content);
         } catch (Exception e) {
-            System.out.println("Unparseable JSON from model, skipping: " + e.getMessage());
+            System.out.println("Bad response from model, skipping: " + e.getMessage());
             return null;
         }
     }
