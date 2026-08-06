@@ -92,6 +92,17 @@ Rules:
     private static JSONObject nullableString() {
         return new JSONObject().put("type", new JSONArray().put("string").put("null"));
     }
+
+    public static void purgeOld() throws Exception {
+    String sql = "DELETE FROM raw_posts WHERE created_at < NOW() - INTERVAL '14 days'";
+    try (Connection conn = PostgresDB.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        int deleted = ps.executeUpdate();
+        System.out.println("Purged " + deleted + " old raw_posts (their spotlight rows cascade-deleted).");
+    }
+    }
+
+
     public static JSONObject structureOnePost(String messageText) throws Exception {
         JSONObject body = new JSONObject();
         body.put("models", new JSONArray()
@@ -239,5 +250,6 @@ Rules:
     public static void main(String[] args) throws Exception {
         TelegramFetcher.fetchAllChannels();
         processUnprocessed();
+        purgeOld();
     }
 }
