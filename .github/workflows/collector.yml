@@ -24,6 +24,8 @@ jobs:
         run: |
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
           echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
+          echo "SUPABASE_URL=https://ltrhpipydxckbexyxavw.supabase.co" >> .env
+          echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
 
       - name: Run the collector
         run: mvn -q -B compile exec:java -Dexec.mainClass=org.alting.OpportunityExtractor
