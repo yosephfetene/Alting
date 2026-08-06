@@ -94,13 +94,48 @@ Rules:
     }
 
     public static void purgeOld() throws Exception {
-    String sql = "DELETE FROM raw_posts WHERE created_at < NOW() - INTERVAL '14 days'";
-    try (Connection conn = PostgresDB.getConnection();
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        int deleted = ps.executeUpdate();
-        System.out.println("Purged " + deleted + " old raw_posts (their spotlight rows cascade-deleted).");
+        String oppWhere =
+            "WHERE (deadline IS NOT NULL AND deadline < NOW()) " +
+            "   OR (deadline IS NULL AND created_at < NOW() - INTERVAL '14 days')";
+        String rawWhere =
+            "WHERE r.created_at < NOW() - INTERVAL '14 days' " +
+            "  AND NOT EXISTS (SELECT 1 FROM spotlight_opportunities s WHERE s.raw_post_id = r.id)";
+
+        try (Connection conn = PostgresDB.getConnection()) {
+
+            // 1a. delete the stored images of expired opportunities (deadline passed, or no-deadline + 14 days)
+            try (PreparedStatement ps = conn.prepareStatement(
+                     "SELECT image_url FROM spotlight_opportunities " + oppWhere + " AND image_url IS NOT NULL");
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) SupabaseStorage.deleteByUrl(rs.getString("image_url"));
+            }
+            // 1b. delete the expired opportunities
+            int cards;
+            try (PreparedStatement o = conn.prepareStatement(
+                     "DELETE FROM spotlight_opportunities " + oppWhere)) {
+                cards = o.executeUpdate();
+            }
+
+            // 2a. delete the stored images of old raw_posts that no longer back a live card
+            try (PreparedStatement ps = conn.prepareStatement(
+                     "SELECT image_urls FROM raw_posts r " + rawWhere);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JSONArray imgs = new JSONArray(rs.getString("image_urls"));
+                    for (int i = 0; i < imgs.length(); i++) SupabaseStorage.deleteByUrl(imgs.getString(i));
+                }
+            }
+            // 2b. delete those raw_posts
+            int raws;
+            try (PreparedStatement r = conn.prepareStatement(
+                     "DELETE FROM raw_posts r " + rawWhere)) {
+                raws = r.executeUpdate();
+            }
+
+            System.out.println("Purged " + cards + " expired/old opportunities and " + raws + " old raw_posts (+ their images).");
+        }
     }
-    }
+
 
 
     public static JSONObject structureOnePost(String messageText) throws Exception {
@@ -222,7 +257,10 @@ Rules:
 
             opportunities++;
             JSONArray imgs = new JSONArray(post.imageUrls());
-            String imageUrl = imgs.isEmpty() ? null : imgs.getString(0);
+            String first = imgs.isEmpty() ? null : imgs.getString(0);
+            // Only store re-hosted (permanent Supabase) URLs. A leftover Telegram
+            // URL is already expired, so store null instead of a dead link.
+            String imageUrl = (first != null && first.contains("supabase")) ? first : null;
 
             insert.setLong(1, post.id());
             insert.setString(2, data.getString("title"));

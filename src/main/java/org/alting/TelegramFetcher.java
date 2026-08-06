@@ -52,6 +52,7 @@ public class TelegramFetcher {
         String sql = "INSERT INTO raw_posts (channel_id, channel_name, message_id, message_text, image_urls, posted_at) "
                    + "VALUES (?, ?, ?, ?, ?::jsonb, ?) "
                    + "ON CONFLICT (channel_id, message_id) DO NOTHING";
+        String updateSql = "UPDATE raw_posts SET image_urls = ?::jsonb WHERE channel_id = ? AND message_id = ?";
 
         int inserted = 0;
 
@@ -62,7 +63,8 @@ public class TelegramFetcher {
         Elements posts = doc.select("div.tgme_widget_message[data-post]");
 
         try (Connection conn = PostgresDB.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement update = conn.prepareStatement(updateSql)) {
 
             for (Element post : posts) {
                 List<String> urls = new ArrayList<>();
@@ -94,7 +96,24 @@ public class TelegramFetcher {
                 ps.setString(5, imageJson);
                 ps.setObject(6, postedAt);
 
-                inserted += ps.executeUpdate();
+                int n = ps.executeUpdate();
+                inserted += n;
+
+                // Re-host images ONLY for new posts, while the Telegram URL is still alive.
+                if (n == 1 && !urls.isEmpty()) {
+                    List<String> hosted = new ArrayList<>();
+                    for (int i = 0; i < urls.size(); i++) {
+                        String permanent = SupabaseStorage.rehost(
+                            urls.get(i), ch.username() + "/" + messageId + "_" + i + ".jpg");
+                        if (permanent != null) hosted.add(permanent);
+                    }
+                    if (!hosted.isEmpty()) {
+                        update.setString(1, new JSONArray(hosted).toString());
+                        update.setLong(2, ch.id());
+                        update.setLong(3, Long.parseLong(messageId));
+                        update.executeUpdate();
+                    }
+                }
             }
         }
 
